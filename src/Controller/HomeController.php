@@ -11,6 +11,7 @@ namespace App\Controller;
 use GuzzleHttp\RequestOptions;
 use Knp\Component\Pager\PaginatorInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\Form\Extension\Core\Type\SearchType;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\Session\SessionInterface;
@@ -106,43 +107,21 @@ class HomeController extends AbstractController
     }
 
     /**
-     * @Route("/advancedsearchpage/", name="advanced_search", methods={"GET"})
+     * @Route("/advancedsearchpage/", name="advanced_search")
      */
-    public function advancedResearch(int $next = 1): Response
+    public function advancedResearch(Request $request, int $next = 1): Response
     {
-        $client = new Client([
-            RequestOptions::HTTP_ERRORS => false,
-        ]);
-        $search = '';
-
-        dump($_GET);
-        if ($_GET) {
-            if ($_GET['name']) {
-                $search = $_GET['name'];
-            }
-            if ($_GET['oracle']) {
-                $search .= '+oracle%3A' . $_GET['oracle'];
-            }
-        }
-        $nameCard = $client->request(
-            'GET',
-            $this->uri .
-            $this->advanceSearch .
-            $search .
-            $this->urlPage .
-            $next .
-            $this->language
+        $form = $this->createForm(
+            SearchType::class
         );
-        $statusCode = $nameCard->getStatusCode();
-        if ($statusCode > 400) {
-            $this->addFlash('danger', "Aucune carte ne correspond à votre recherche");
-            dump($search);
-
-            return $this->redirectToRoute('advanced_search');
+        $form->handleRequest($request);
+        if ($form->isSubmitted() && $form->isValid()) {
+            $data = $form->getData();
+            $searchData = $data['search'];
+            $searchDataResult = implode('+', explode(' ', $searchData));
+            $searchMediaType = $data['media_type'];
         }
-        if (!empty($search)) {
-            return $this->redirectToRoute('searchpage', ['search' => $search, 'next' => $next,]);
-        }
+//        $movieResults = ($movieLister->listMovieByTitle($searchDataResult))['results'];
         return $this->render('homepage/advanced_search.html.twig');
     }
 }
